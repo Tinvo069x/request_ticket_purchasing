@@ -52,6 +52,10 @@
     .ticket-id-cell{font-weight:700;color:#1f2937;white-space:normal;line-height:1.25;}
     .priority-pill{display:inline-block;padding:5px 9px;border-radius:999px;font-weight:700;background:#eef2ff;color:#3730a3;font-size:12px;}
     .priority-High,.priority-Urgent{background:#fee2e2;color:#b91c1c}.priority-Normal{background:#e0f2fe;color:#0369a1}.priority-Low{background:#f3f4f6;color:#4b5563}
+    .attachment-btn{display:inline-flex;align-items:center;gap:6px;background:#2563eb;color:#fff!important;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 5px 12px rgba(37,99,235,.18)}
+    .attachment-btn:hover{background:#1d4ed8;text-decoration:none}
+    .path-empty{color:#9ca3af;font-weight:700}
+    .path-locked{display:inline-flex;align-items:center;gap:6px;background:#f3f4f6;color:#6b7280;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
     .status-pill{display:inline-flex;align-items:center;gap:6px;font-weight:800;white-space:nowrap;}
     .cell-text{display:block;white-space:normal;line-height:1.35;max-height:58px;overflow:auto;}
     body.compact .pagination-bar{padding:8px 12px;}
@@ -134,7 +138,7 @@
           <span id="adminBadge" class="admin-badge">User Mode</span>
           <span id="dbStatus" class="db-status connecting" title="Checking database connection">🟡 Connecting...</span>
         </div>
-        <table><thead><tr><th>Ticket ID</th><th>ID Staff</th><th>Requestor</th><th>Subject/Problem/Ideas</th><th>Description</th><th>Priority</th><th>Status</th><th>Date Submitter</th><th>Date Solve</th><th>Action</th><th>Comments</th><th>Delete</th></tr></thead><tbody id="ticketBody"></tbody></table>
+        <table><thead><tr><th>Ticket ID</th><th>ID Staff</th><th>Requestor</th><th>Subject/Problem/Ideas</th><th>Description</th><th>Path</th><th>Priority</th><th>Status</th><th>Date Submitter</th><th>Date Solve</th><th>Action</th><th>Comments</th><th>Delete</th></tr></thead><tbody id="ticketBody"></tbody></table>
         <div class="pagination-bar">
           <div id="pageInfo" class="page-info">Showing 0–0 of 0</div>
           <div class="page-controls">
@@ -156,7 +160,11 @@
         <div><label>Priority</label><select id="priority"><option>Normal</option><option>High</option><option>Urgent</option><option>Low</option></select></div>
         <div class="full"><label>Subject / Problem / Ideas <span class="req-mark">*</span></label><input id="subject" placeholder="Example: Training, Report automation, SAP issue..."><div id="err_subject" class="error-text">Vui lòng nhập Subject / Problem / Ideas</div></div>
         <div class="full"><label>Description <span class="req-mark">*</span></label><textarea id="description" placeholder="Describe your request..."></textarea><div id="err_description" class="error-text">Vui lòng nhập Description</div></div>
-        <div><label>Department</label><input id="department" placeholder="Purchasing / SCM / WH..."></div>
+        <div class="full">
+          <label>Link Path</label>
+          <input id="link_path" type="url" placeholder="Paste attachment link here (Optional)">
+          <div class="hint">Optional. Dán link tài liệu/thư mục nếu có.</div>
+        </div>
         <div><label>Status</label><input id="status" value="Submitted" disabled><div class="hint">Sau khi Submit, ticket sẽ có trạng thái Submitted. Chỉ Admin được đổi trạng thái.</div></div>
       </div>
       <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitTicket()">Submit Ticket</button></div>
@@ -283,7 +291,8 @@ function toggleAdmin(){
     isAdmin=false;
     sessionStorage.removeItem('ticket_admin');
     localStorage.removeItem('ticket_admin_remember');
-    renderDashboard(); updateAdminUI();
+    updateAdminUI();
+    loadTickets(true);
     return;
   }
   openAdminLogin();
@@ -308,7 +317,8 @@ function adminLoginSubmit(){
     sessionStorage.setItem('ticket_admin','true');
     if(rememberAdmin.checked) localStorage.setItem('ticket_admin_remember','true');
     closeAdminLogin();
-    renderDashboard(); updateAdminUI();
+    updateAdminUI();
+    loadTickets(true);
   }else{
     adminLoginError.style.display='block';
     adminPassword.focus();
@@ -334,9 +344,17 @@ function setInvalid(id, bad){
 }
 function resetFormValidation(){['staff_id','requestor','subject','description'].forEach(id=>setInvalid(id,false));}
 
+function renderPathLink(url){
+  const raw = (url || "").trim();
+  if(!raw) return `<span class="path-empty">-</span>`;
+  if(!isAdmin) return `<span class="path-locked">🔒 Admin</span>`;
+  const safe = escapeHtml(raw);
+  return `<a href="${safe}" target="_blank" rel="noopener noreferrer" class="attachment-btn">📎 Click</a>`;
+}
+
 async function submitTicket(){
   resetFormValidation();
-  const row={staff_id:staff_id.value.trim(),requestor:requestor.value.trim(),department:department.value.trim(),subject:subject.value.trim(),description:description.value.trim(),priority:priority.value,status:'Submitted',comments:'',date_submitted:new Date().toISOString()};
+  const row={staff_id:staff_id.value.trim(),requestor:requestor.value.trim(),link_path:link_path.value.trim(),subject:subject.value.trim(),description:description.value.trim(),priority:priority.value,status:'Submitted',comments:'',date_submitted:new Date().toISOString()};
   let invalid=false;
   ['staff_id','requestor','subject','description'].forEach(id=>{ if(!row[id]){ setInvalid(id,true); invalid=true; } });
   if(invalid){alert('Vui lòng nhập đủ các mục bắt buộc (*)');return;}
@@ -353,7 +371,8 @@ async function loadTickets(goFirstPage=false){
   if(goFirstPage) currentPage = 1;
   if(supabaseClient){
     setDbStatus('connecting', '🟡 Connecting...', 'Loading data from Supabase');
-    const {data,error}=await supabaseClient.from(TABLE_NAME).select('*').order('date_submitted',{ascending:false});
+    const selectCols = isAdmin ? '*' : 'id,staff_id,requestor,subject,description,priority,status,date_submitted,date_solve,comments';
+    const {data,error}=await supabaseClient.from(TABLE_NAME).select(selectCols).order('date_submitted',{ascending:false});
     if(error){
       setDbStatus('offline', '🔴 Offline', error.message);
       alert('Load failed: '+error.message);
@@ -372,7 +391,7 @@ async function loadTickets(goFirstPage=false){
 function filtered(){
   const r=filterRequestor.value, s=filterStatus.value, q=searchBox.value.toLowerCase();
   return tickets
-    .filter(x=>(r==='All'||x.requestor===r)&&(s==='All'||x.status===s)&&((x.subject||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.requestor||'').toLowerCase().includes(q)||(x.staff_id||'').toLowerCase().includes(q)))
+    .filter(x=>(r==='All'||x.requestor===r)&&(s==='All'||x.status===s)&&((x.subject||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.requestor||'').toLowerCase().includes(q)||(x.staff_id||'').toLowerCase().includes(q)||(isAdmin && (x.link_path||'').toLowerCase().includes(q))))
     .sort((a,b)=>new Date(b.date_submitted || b.created_at || 0)-new Date(a.date_submitted || a.created_at || 0));
 }
 function resetPageAndRender(){ currentPage = 1; renderDashboard(); }
@@ -422,6 +441,7 @@ function renderDashboard(){
     <td>${escapeHtml(x.requestor||'')}</td>
     <td><span class="cell-text">${escapeHtml(x.subject||'')}</span></td>
     <td><span class="cell-text">${escapeHtml(x.description||'')}</span></td>
+    <td>${renderPathLink(x.link_path)}</td>
     <td><span class="priority-pill priority-${escapeHtml(x.priority||'Normal')}">${escapeHtml(x.priority||'')}</span></td>
     <td class="status ${x.status}"><span class="status-pill">${statusIcon(x.status)} ${x.status||''}</span></td>
     <td>${fmt(x.date_submitted)}</td>
@@ -429,7 +449,7 @@ function renderDashboard(){
     <td>${isAdmin?`<select class="admin-select" onchange="updateStatus('${x.id}',this.value)"><option ${sel(x.status,'Submitted')}>Submitted</option><option ${sel(x.status,'In-progress')}>In-progress</option><option ${sel(x.status,'Pending')}>Pending</option><option ${sel(x.status,'Completed')}>Completed</option><option ${sel(x.status,'Cancel')}>Cancel</option></select>`:'<span class="admin-only-pill">Admin only</span>'}</td>
     <td>${isAdmin?`<textarea class="comment-box" placeholder="Admin comments..." onblur="updateComment('${x.id}', this.value)">${escapeHtml(x.comments||x.comment||'')}</textarea>`:`<span class="cell-text">${escapeHtml(x.comments||x.comment||'')}</span>`}</td>
     <td>${isAdmin?`<button class="delete-btn" title="Delete ticket" onclick="confirmDelete('${x.id}')">🗑️</button>`:'<span class="admin-only-pill">Admin only</span>'}</td>
-  </tr>`).join('') || '<tr><td colspan="12" class="no-data">No data</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="13" class="no-data">No data</td></tr>';
 
   renderPagination(totalRows,totalPages,start,end);
   drawCharts(data); updateAdminUI();
