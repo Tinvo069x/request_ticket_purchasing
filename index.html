@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Ticket Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f4f7fb;color:#111827} .app{display:flex;min-height:100vh}.side{width:230px;background:linear-gradient(180deg,#1155cc,#0b3f9e);color:#fff;padding:18px 14px;position:fixed;top:0;bottom:0;left:0;display:flex;flex-direction:column;overflow:hidden}.brand{font-size:22px;font-weight:800;line-height:1.05}.brand small{display:block;font-size:11px;margin-top:3px}.new-btn{width:100%;margin:24px 0 18px;padding:13px;border:1px solid rgba(255,255,255,.75);border-radius:8px;background:#1d64e8;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.2)}.clock{font-weight:700;border-top:2px solid #fff;border-bottom:2px solid #fff;padding:8px 0;font-size:13px}.filter{margin-top:34px}.filter label{font-size:12px;font-weight:700;display:block;margin:12px 0 5px}.filter select,.filter input{width:100%;padding:8px;border-radius:4px;border:1px solid rgba(255,255,255,.6);background:#1455c2;color:#fff}.help{font-size:12px;line-height:1.25;margin-top:18px;padding-bottom:4px}.main{margin-left:230px;width:calc(100% - 230px);padding:22px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px 24px;min-height:90px;display:flex;align-items:center;gap:18px;box-shadow:0 1px 5px rgba(0,0,0,.03)}.icon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#e8f1ff;font-size:22px}.card h4{margin:0 0 8px;font-size:14px}.card .num{font-size:34px;font-weight:800}.panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;height:220px}.panel h3{margin:0 0 10px;color:#0057ff;font-size:16px}.table-panel{background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin-top:18px;overflow:auto}.toolbar{padding:12px;display:flex;gap:10px;align-items:center}.toolbar input{padding:9px;border:1px solid #d1d5db;border-radius:7px;min-width:260px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#0057ff;color:#fff;text-align:left;padding:9px;white-space:nowrap}td{padding:9px;border-bottom:1px solid #e5e7eb}tr:nth-child(even){background:#f3f4f6}.status{font-weight:700}.Submitted{color:#0057ff}.Completed{color:#16a34a}.In-progress{color:#b45309}.Pending{color:#2563eb}.Cancel{color:#dc2626}.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:99}.modal-box{background:#fff;width:min(980px,94vw);border-radius:16px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-head h2{margin:0;color:#0057ff;font-size:34px}.close{border:0;background:#f3f4f6;font-size:32px;width:54px;height:54px;border-radius:12px;cursor:pointer;font-weight:800}.form{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:18px}.form .full{grid-column:1/-1}.form label{font-size:16px;font-weight:800;color:#111827}.form input,.form select,.form textarea{width:100%;padding:14px 16px;margin-top:8px;border:1px solid #d1d5db;border-radius:10px;font-size:18px;background:#fff}.form input:focus,.form select:focus,.form textarea:focus{outline:3px solid rgba(0,87,255,.18);border-color:#0057ff}.form textarea{height:135px;resize:vertical}.req-mark{color:#dc2626}.hint{font-size:12px;color:#6b7280;margin-top:5px}.error-text{display:none;color:#dc2626;font-size:13px;font-weight:700;margin-top:6px}.invalid{border-color:#dc2626!important;background:#fff5f5!important}.actions{display:flex;justify-content:flex-end;gap:14px;margin-top:28px}.btn{padding:14px 26px;border-radius:10px;border:0;font-weight:800;cursor:pointer;font-size:18px}.primary{background:#0057ff;color:#fff}#adminBtn{min-width:156px;box-shadow:0 8px 18px rgba(0,87,255,.18)}#adminBtn:hover{background:#0b4edb;transform:translateY(-1px)}.ghost{background:#e5e7eb}.config{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;border-radius:10px;margin-bottom:12px;font-size:13px}.admin-badge{margin-left:auto;font-weight:700;font-size:13px;padding:8px 12px;border-radius:999px;background:#fee2e2;color:#991b1b}.admin-badge.on{background:#dcfce7;color:#166534}.admin-select{padding:6px 8px;border:1px solid #9ca3af;border-radius:6px}.admin-select:disabled{background:#f3f4f6;color:#6b7280;cursor:not-allowed}.comment-box{width:240px;min-height:38px;padding:7px 9px;border:1px solid #9ca3af;border-radius:7px;font-family:inherit;font-size:13px;resize:vertical;background:#fff}.comment-box:disabled{background:#f3f4f6;color:#6b7280;cursor:not-allowed}.admin-only-pill{display:inline-block;padding:6px 9px;border-radius:999px;background:#f3f4f6;color:#6b7280;font-size:12px;font-weight:700}.solve-date{white-space:nowrap}.locked-note{font-size:11px;color:#6b7280;margin-top:4px}.side-admin{margin-top:auto;padding-top:18px}.admin-login{width:100%;height:54px;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:12px;border:1px solid rgba(255,255,255,.42);background:rgba(255,255,255,.12);color:#fff;font-size:17px;font-weight:500;letter-spacing:.2px;cursor:pointer;transition:.25s;backdrop-filter:blur(6px);box-shadow:0 6px 16px rgba(0,0,0,.16)}.admin-login:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.85);transform:translateY(-1px);box-shadow:0 9px 20px rgba(0,0,0,.2)}.admin-login:active{transform:scale(.98)}.admin-login.logout{background:rgba(22,163,74,.22);border-color:rgba(187,247,208,.75)}.admin-icon{width:19px;height:19px;opacity:.95;flex:0 0 auto}.admin-modal{display:none;position:fixed;inset:0;background:rgba(17,24,39,.55);backdrop-filter:blur(5px);align-items:center;justify-content:center;z-index:120}.admin-login-box{width:min(410px,92vw);background:#fff;border-radius:18px;padding:26px 28px 24px;box-shadow:0 22px 70px rgba(0,0,0,.35);animation:popIn .22s ease-out}.admin-title{text-align:center;color:#0057ff;font-size:25px;font-weight:900;margin:0 0 12px}.admin-line{height:1px;background:#e5e7eb;margin:0 -28px 20px}.admin-avatar{text-align:center;font-size:46px;margin-bottom:8px}.admin-name{text-align:center;font-weight:800;margin-bottom:18px}.login-field label{font-size:14px;font-weight:800;display:block;margin-bottom:8px}.password-wrap{display:flex;align-items:center;border:1px solid #d1d5db;border-radius:10px;background:#fff;overflow:hidden}.password-wrap input{border:0;outline:0;flex:1;padding:13px 14px;font-size:18px}.eye-btn{border:0;background:#f3f4f6;cursor:pointer;font-size:18px;padding:13px 14px}.remember-row{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;color:#374151}.login-error{display:none;margin-top:8px;color:#dc2626;font-size:13px;font-weight:800}.admin-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px}.admin-actions button{padding:11px 20px;border:0;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer}.admin-cancel{background:#e5e7eb}.admin-submit{background:#0057ff;color:#fff}@keyframes popIn{from{opacity:0;transform:scale(.86) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}.delete-btn{width:40px;height:36px;border:0;border-radius:10px;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:17px;display:inline-flex;align-items:center;justify-content:center;transition:.2s}.delete-btn:hover{background:#dc2626;color:#fff;transform:translateY(-1px);box-shadow:0 8px 18px rgba(220,38,38,.22)}.delete-btn:disabled{background:#f3f4f6;color:#9ca3af;cursor:not-allowed;box-shadow:none;transform:none}.confirm-box{width:min(390px,92vw);background:#fff;border-radius:18px;padding:26px 28px;text-align:center;box-shadow:0 22px 70px rgba(0,0,0,.35);animation:popIn .22s ease-out}.confirm-icon{width:62px;height:62px;border-radius:50%;background:#fee2e2;color:#dc2626;display:grid;place-items:center;margin:0 auto 12px;font-size:28px}.confirm-box h2{margin:0 0 8px;color:#111827;font-size:24px}.confirm-box p{margin:0 0 6px;font-weight:700;color:#111827}.confirm-box small{color:#6b7280}.confirm-buttons{display:flex;justify-content:center;gap:12px;margin-top:24px}.confirm-buttons button{min-width:110px;padding:12px 18px;border:0;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer}.confirm-no{background:#e5e7eb;color:#111827}.confirm-yes{background:#dc2626;color:#fff}.toast{position:fixed;right:24px;bottom:24px;background:#111827;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:14px;font-weight:700;display:none;z-index:200}.toast.show{display:block;animation:popIn .18s ease-out}@media(max-width:900px){.form{grid-template-columns:1fr}.modal-head h2{font-size:26px}.modal-box{padding:22px}.btn{font-size:16px}.side{position:relative;width:100%;height:auto}.app{display:block}.main{margin-left:0;width:100%}.cards,.panel-grid{grid-template-columns:1fr}.side-admin{position:static;margin-top:28px}.help{position:static;margin-top:18px}.panel{height:260px}}
+  </style>
+
+  <style>
+    /* ===== Optimized Layout: Bigger Detail Table ===== */
+    :root{--side-w:210px;--top-space:330px;}
+    .side{width:var(--side-w);padding:14px 12px;}
+    .brand{font-size:20px}.new-btn{margin:18px 0 14px;padding:11px}.filter{margin-top:24px}
+    .main{margin-left:var(--side-w);width:calc(100% - var(--side-w));padding:14px 16px;}
+    .config{padding:8px 10px;margin-bottom:10px;}
+    .cards{gap:12px;margin-bottom:12px;}
+    .card{min-height:72px;padding:12px 18px;border-radius:12px;}
+    .icon{width:36px;height:36px;font-size:19px}.card h4{font-size:13px;margin-bottom:4px}.card .num{font-size:28px;}
+    .panel-grid{gap:12px}.panel{height:150px;padding:14px;border-radius:12px}.panel h3{font-size:15px;margin-bottom:4px}
+    .table-panel{margin-top:12px;height:calc(100vh - 310px);overflow:auto;border-radius:14px;}
+    .toolbar{position:sticky;top:0;z-index:12;background:#fff;padding:10px 12px;border-bottom:1px solid #e5e7eb;}
+    .toolbar input{height:40px;min-width:310px}.toolbar .btn{height:44px;padding:0 24px;font-size:16px;border-radius:10px;}
+    table{min-width:1650px;font-size:13px;}
+    thead th{position:sticky;top:65px;z-index:10;box-shadow:0 1px 0 rgba(0,0,0,.08);}
+    th,td{padding:10px 12px;vertical-align:middle;}
+    td:nth-child(4),td:nth-child(5){max-width:260px;white-space:normal;line-height:1.35;}
+    .comment-box{width:340px;min-height:54px;}
+    .admin-select{min-width:135px;height:38px;font-size:14px;}
+    .compact-toggle{background:#eef4ff;color:#0057ff;border:1px solid #cfe0ff;}
+    .compact-toggle.active{background:#0057ff;color:#fff;}
+    body.compact .config, body.compact .panel-grid{display:none;}
+    body.compact .cards{grid-template-columns:repeat(4,1fr);margin-bottom:10px;}
+    body.compact .card{min-height:64px;padding:10px 16px;}
+    body.compact .table-panel{height:calc(100vh - 110px);}
+    body.compact thead th{top:61px;}
+
+    .rows-control{display:flex;align-items:center;gap:8px;margin-left:4px;color:#374151;font-size:13px;font-weight:700;}
+    .rows-control select{height:40px;border:1px solid #d1d5db;border-radius:9px;background:#fff;padding:0 10px;font-weight:700;}
+    .pagination-bar{position:sticky;bottom:0;z-index:14;background:#fff;border-top:1px solid #e5e7eb;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .page-info{font-size:13px;color:#4b5563;font-weight:700;white-space:nowrap;}
+    .page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+    .page-numbers{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+    .page-btn,.page-nav{border:1px solid #d1d5db;background:#fff;color:#111827;border-radius:9px;min-width:36px;height:36px;padding:0 10px;font-weight:700;cursor:pointer;transition:.18s;}
+    .page-btn:hover,.page-nav:hover{border-color:#0057ff;color:#0057ff;background:#eef4ff;}
+    .page-btn.active{background:#0057ff;border-color:#0057ff;color:#fff;}
+    .page-btn.dots{border:0;background:transparent;cursor:default;min-width:24px;color:#6b7280;}
+    .page-nav:disabled{opacity:.45;cursor:not-allowed;background:#f3f4f6;color:#9ca3af;border-color:#e5e7eb;}
+    .ticket-id-cell{font-weight:700;color:#1f2937;white-space:normal;line-height:1.25;}
+    .priority-pill{display:inline-block;padding:5px 9px;border-radius:999px;font-weight:700;background:#eef2ff;color:#3730a3;font-size:12px;}
+    .priority-High,.priority-Urgent{background:#fee2e2;color:#b91c1c}.priority-Normal{background:#e0f2fe;color:#0369a1}.priority-Low{background:#f3f4f6;color:#4b5563}
+    .status-pill{display:inline-flex;align-items:center;gap:6px;font-weight:800;white-space:nowrap;}
+    .cell-text{display:block;white-space:normal;line-height:1.35;max-height:58px;overflow:auto;}
+    body.compact .pagination-bar{padding:8px 12px;}
+    @media(max-width:900px){
+      .side{width:100%;}.main{margin-left:0;width:100%;padding:12px}.table-panel{height:auto;max-height:70vh}.toolbar{position:relative;flex-wrap:wrap}.toolbar input{min-width:100%;}thead th{top:0}.panel{height:220px}body.compact .table-panel{height:auto;max-height:75vh}
+    }
+  </style>
+
+
+  <style>
+    /* ===== Supabase Connection Status Badge ===== */
+    .db-status{
+      margin-left:0;
+      padding:8px 13px;
+      border-radius:999px;
+      font-size:13px;
+      font-weight:600;
+      white-space:nowrap;
+      border:1px solid transparent;
+    }
+    .db-status.connected{background:#dcfce7;color:#15803d;border-color:#bbf7d0;}
+    .db-status.offline{background:#fee2e2;color:#b91c1c;border-color:#fecaca;}
+    .db-status.connecting{background:#fef3c7;color:#b45309;border-color:#fde68a;}
+  </style>
+
+
+  <style>
+    /* ===== Chart Fix: show full legend/title and keep canvas inside panel ===== */
+    .chart-panel{height:230px;display:flex;flex-direction:column;overflow:hidden;}
+    .chart-panel h3{flex:0 0 auto;}
+    .chart-wrap{position:relative;flex:1;min-height:165px;width:100%;}
+    .chart-wrap canvas{width:100%!important;height:100%!important;display:block;}
+    body.compact .panel-grid{display:none;}
+    @media(max-width:900px){.chart-panel{height:250px}.chart-wrap{min-height:190px}}
+  </style>
+
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">REQUEST TICKET <small>By User</small></div>
+      <button class="new-btn" onclick="openModal()">＋ New Request 👆</button>
+      <div id="clock" class="clock"></div>
+      <div class="filter">
+        <label>Requestor</label><select id="filterRequestor" onchange="resetPageAndRender()"><option value="All">All</option></select>
+        <label>Status</label><select id="filterStatus" onchange="resetPageAndRender()"><option value="All">All</option><option>Submitted</option><option>In-progress</option><option>Completed</option><option>Pending</option><option>Cancel</option></select>
+      </div>
+      <div class="side-admin"><button id="adminBtn" class="admin-login" onclick="toggleAdmin()"><svg class="admin-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V7l7-4z"/><path d="M9.5 12l1.5 1.5L14.5 10"/></svg><span>Admin Login</span></button></div>
+      <div class="help"><b>Need help?</b><br>If you need assistance, please submit any checklist items, issues, or ideas for review and development.<br><br><b>Digital Tin Vo Quoc</b><br>Admin</div>
+    </aside>
+
+    <main class="main">
+      <section class="cards">
+        <div class="card"><div class="icon">🔍</div><div><h4>Total Requests</h4><div id="total" class="num">0</div></div></div>
+        <div class="card"><div class="icon">📨</div><div><h4>Submitted</h4><div id="submitted" class="num">0</div></div></div>
+        <div class="card"><div class="icon">✅</div><div><h4>Completed</h4><div id="completed" class="num">0</div></div></div>
+        <div class="card"><div class="icon">⌛</div><div><h4>In-progress</h4><div id="inprogress" class="num">0</div></div></div>
+      </section>
+
+      <section class="panel-grid">
+        <div class="panel chart-panel"><h3>Progress Overview</h3><div class="chart-wrap"><canvas id="progressChart"></canvas></div></div>
+        <div class="panel chart-panel"><h3>Request by Month</h3><div class="chart-wrap"><canvas id="monthChart"></canvas></div></div>
+      </section>
+
+      <section class="table-panel">
+        <div class="toolbar">
+          <input id="searchBox" placeholder="Search subject / description..." oninput="resetPageAndRender()">
+          <button class="btn ghost" onclick="loadTickets(true)">Refresh</button>
+          <button id="compactBtn" class="btn compact-toggle" onclick="toggleCompact()">Compact View</button>
+          <div class="rows-control">
+            <span>Rows</span>
+            <select id="rowsPerPageSelect" onchange="changeRowsPerPage(this.value)">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <span id="adminBadge" class="admin-badge">User Mode</span>
+          <span id="dbStatus" class="db-status connecting" title="Checking database connection">🟡 Connecting...</span>
+        </div>
+        <table><thead><tr><th>Ticket ID</th><th>ID Staff</th><th>Requestor</th><th>Subject/Problem/Ideas</th><th>Description</th><th>Priority</th><th>Status</th><th>Date Submitter</th><th>Date Solve</th><th>Action</th><th>Comments</th><th>Delete</th></tr></thead><tbody id="ticketBody"></tbody></table>
+        <div class="pagination-bar">
+          <div id="pageInfo" class="page-info">Showing 0–0 of 0</div>
+          <div class="page-controls">
+            <button class="page-nav" onclick="changePage(currentPage-1)">‹ Prev</button>
+            <div id="pageNumbers" class="page-numbers"></div>
+            <button class="page-nav" onclick="changePage(currentPage+1)">Next ›</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="modal-box">
+      <div class="modal-head"><h2>New Request Ticket</h2><button class="close" onclick="closeModal()">×</button></div>
+      <div class="form">
+        <div><label>ID <span class="req-mark">*</span></label><input id="staff_id" placeholder="ID Staff" autocomplete="off"><div id="err_staff_id" class="error-text">Vui lòng nhập ID Staff</div></div>
+        <div><label>Requestor <span class="req-mark">*</span></label><input id="requestor" placeholder="Full Name" autocomplete="name"><div id="err_requestor" class="error-text">Vui lòng nhập Full Name</div></div>
+        <div><label>Priority</label><select id="priority"><option>Normal</option><option>High</option><option>Urgent</option><option>Low</option></select></div>
+        <div class="full"><label>Subject / Problem / Ideas <span class="req-mark">*</span></label><input id="subject" placeholder="Example: Training, Report automation, SAP issue..."><div id="err_subject" class="error-text">Vui lòng nhập Subject / Problem / Ideas</div></div>
+        <div class="full"><label>Description <span class="req-mark">*</span></label><textarea id="description" placeholder="Describe your request..."></textarea><div id="err_description" class="error-text">Vui lòng nhập Description</div></div>
+        <div><label>Department</label><input id="department" placeholder="Purchasing / SCM / WH..."></div>
+        <div><label>Status</label><input id="status" value="Submitted" disabled><div class="hint">Sau khi Submit, ticket sẽ có trạng thái Submitted. Chỉ Admin được đổi trạng thái.</div></div>
+      </div>
+      <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitTicket()">Submit Ticket</button></div>
+    </div>
+  </div>
+
+
+  <div id="adminLoginModal" class="admin-modal" onclick="adminBackdropClose(event)">
+    <div class="admin-login-box">
+      <h2 class="admin-title">ADMIN LOGIN</h2>
+      <div class="admin-line"></div>
+      <div class="admin-avatar">👤</div>
+      <div class="admin-name">Admin</div>
+
+      <div class="login-field">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input id="adminPassword" type="password" placeholder="Enter password" onkeydown="adminEnter(event)">
+          <button class="eye-btn" type="button" onclick="togglePasswordView()">👁</button>
+        </div>
+        <div id="adminLoginError" class="login-error">❌ Incorrect password</div>
+      </div>
+
+      <label class="remember-row">
+        <input id="rememberAdmin" type="checkbox">
+        <span>Remember this device</span>
+      </label>
+
+      <div class="admin-actions">
+        <button class="admin-cancel" type="button" onclick="closeAdminLogin()">Cancel</button>
+        <button class="admin-submit" type="button" onclick="adminLoginSubmit()">Login</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="deleteModal" class="modal" onclick="deleteBackdropClose(event)">
+    <div class="confirm-box">
+      <div class="confirm-icon">🗑️</div>
+      <h2>Delete Ticket</h2>
+      <p>Delete this ticket?</p>
+      <small>This action cannot be undone.</small>
+      <div class="confirm-buttons">
+        <button class="confirm-no" type="button" onclick="closeDeleteModal()">No</button>
+        <button class="confirm-yes" type="button" onclick="deleteTicket()">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://ktojyvgqfhmdghrmmscs.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_WwqOKc3tHl5shvavyegZZQ_bYF3TLQB"; // Publishable key only - do NOT put secret key in HTML
+const TABLE_NAME = "request_tickets";
+let supabaseClient = null, tickets = [], progressChart, monthChart;
+let deleteID = null;
+let currentPage = 1;
+let rowsPerPage = Number(localStorage.getItem("ticket_rows_per_page") || 10);
+let isAdmin = sessionStorage.getItem("ticket_admin") === "true" || localStorage.getItem("ticket_admin_remember") === "true";
+const ADMIN_PASSWORD = "tin";
+let isCompact = localStorage.getItem("ticket_compact_view") === "true";
+function applyCompact(){
+  document.body.classList.toggle('compact', isCompact);
+  const btn = document.getElementById('compactBtn');
+  if(btn){
+    btn.textContent = isCompact ? 'Full View' : 'Compact View';
+    btn.classList.toggle('active', isCompact);
+  }
+  const rps = document.getElementById('rowsPerPageSelect');
+  if(rps) rps.value = String(rowsPerPage);
+  if(typeof renderDashboard === 'function'){
+    setTimeout(()=>drawCharts(filtered()), 120);
+  }
+}
+function toggleCompact(){
+  isCompact = !isCompact;
+  localStorage.setItem('ticket_compact_view', isCompact ? 'true' : 'false');
+  applyCompact();
+}
+if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+function setDbStatus(state, text, title){
+  const badge = document.getElementById('dbStatus');
+  if(!badge) return;
+  badge.className = 'db-status ' + state;
+  badge.textContent = text;
+  badge.title = title || text;
+}
+
+async function checkSupabaseConnection(){
+  if(!supabaseClient){
+    setDbStatus('offline', '🔴 Offline', 'Supabase URL or Publishable Key is missing');
+    return false;
+  }
+
+  setDbStatus('connecting', '🟡 Connecting...', 'Checking Supabase connection');
+
+  try{
+    const start = performance.now();
+    const { error } = await supabaseClient
+      .from(TABLE_NAME)
+      .select('id')
+      .limit(1);
+
+    if(error) throw error;
+
+    const ms = Math.max(1, Math.round(performance.now() - start));
+    setDbStatus('connected', `🟢 Connected (${ms} ms)`, 'Connected to Supabase');
+    return true;
+  }
+  catch(e){
+    setDbStatus('offline', '🔴 Offline', e.message || 'Unable to connect to Supabase');
+    return false;
+  }
+}
+
+function tick(){document.getElementById('clock').textContent=new Date().toLocaleString('en-GB',{hour12:false})} setInterval(tick,1000); tick();
+function openModal(){document.getElementById('modal').style.display='flex'; setTimeout(()=>staff_id.focus(),50)} function closeModal(){document.getElementById('modal').style.display='none'; if(typeof resetFormValidation==='function') resetFormValidation();}
+function toggleAdmin(){
+  if(isAdmin){
+    isAdmin=false;
+    sessionStorage.removeItem('ticket_admin');
+    localStorage.removeItem('ticket_admin_remember');
+    renderDashboard(); updateAdminUI();
+    return;
+  }
+  openAdminLogin();
+}
+function openAdminLogin(){
+  adminLoginModal.style.display='flex';
+  adminLoginError.style.display='none';
+  adminPassword.value='';
+  setTimeout(()=>adminPassword.focus(),80);
+}
+function closeAdminLogin(){
+  adminLoginModal.style.display='none';
+  adminLoginError.style.display='none';
+  adminPassword.value='';
+}
+function adminBackdropClose(e){ if(e.target.id==='adminLoginModal') closeAdminLogin(); }
+function adminEnter(e){ if(e.key==='Enter') adminLoginSubmit(); }
+function togglePasswordView(){ adminPassword.type = adminPassword.type === 'password' ? 'text' : 'password'; }
+function adminLoginSubmit(){
+  if(adminPassword.value === ADMIN_PASSWORD){
+    isAdmin=true;
+    sessionStorage.setItem('ticket_admin','true');
+    if(rememberAdmin.checked) localStorage.setItem('ticket_admin_remember','true');
+    closeAdminLogin();
+    renderDashboard(); updateAdminUI();
+  }else{
+    adminLoginError.style.display='block';
+    adminPassword.focus();
+  }
+}
+function adminButtonHTML(label){
+  return `<svg class="admin-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V7l7-4z"/><path d="M9.5 12l1.5 1.5L14.5 10"/></svg><span>${label}</span>`;
+}
+function updateAdminUI(){
+  if(!document.getElementById('adminBadge')) return;
+  adminBadge.textContent = isAdmin ? '🟢 Admin Mode' : '🔴 User Mode';
+  adminBadge.className = isAdmin ? 'admin-badge on' : 'admin-badge';
+  adminBtn.innerHTML = adminButtonHTML(isAdmin ? 'Admin Logout' : 'Admin Login');
+  adminBtn.className = isAdmin ? 'admin-login logout' : 'admin-login';
+}
+function ticketNo(id){return 'REQ-' + String(id).padStart(5,'0')}
+
+function setInvalid(id, bad){
+  const el=document.getElementById(id), err=document.getElementById('err_'+id);
+  if(!el) return;
+  el.classList.toggle('invalid', !!bad);
+  if(err) err.style.display = bad ? 'block' : 'none';
+}
+function resetFormValidation(){['staff_id','requestor','subject','description'].forEach(id=>setInvalid(id,false));}
+
+async function submitTicket(){
+  resetFormValidation();
+  const row={staff_id:staff_id.value.trim(),requestor:requestor.value.trim(),department:department.value.trim(),subject:subject.value.trim(),description:description.value.trim(),priority:priority.value,status:'Submitted',comments:'',date_submitted:new Date().toISOString()};
+  let invalid=false;
+  ['staff_id','requestor','subject','description'].forEach(id=>{ if(!row[id]){ setInvalid(id,true); invalid=true; } });
+  if(invalid){alert('Vui lòng nhập đủ các mục bắt buộc (*)');return;}
+  if(supabaseClient){
+    const {error}=await supabaseClient.from(TABLE_NAME).insert([row]);
+    if(error){alert('Submit failed: '+error.message);return;}
+  }else{
+    row.id=Date.now(); let local=JSON.parse(localStorage.getItem(TABLE_NAME)||'[]'); local.push(row); localStorage.setItem(TABLE_NAME,JSON.stringify(local));
+  }
+  closeModal(); document.querySelectorAll('#modal input,#modal textarea').forEach(x=>{ if(x.id!=='status') x.value=''; }); status.value='Submitted'; resetFormValidation(); currentPage=1; await loadTickets(true); alert('Ticket submitted successfully!');
+}
+
+async function loadTickets(goFirstPage=false){
+  if(goFirstPage) currentPage = 1;
+  if(supabaseClient){
+    setDbStatus('connecting', '🟡 Connecting...', 'Loading data from Supabase');
+    const {data,error}=await supabaseClient.from(TABLE_NAME).select('*').order('date_submitted',{ascending:false});
+    if(error){
+      setDbStatus('offline', '🔴 Offline', error.message);
+      alert('Load failed: '+error.message);
+      return;
+    }
+    tickets=data||[];
+    setDbStatus('connected', '🟢 Connected', 'Connected to Supabase');
+  }else{
+    tickets=JSON.parse(localStorage.getItem(TABLE_NAME)||'[]').sort((a,b)=>new Date(b.date_submitted)-new Date(a.date_submitted));
+    setDbStatus('offline', '🔴 Local Mode', 'Using LocalStorage because Supabase is not configured');
+  }
+  buildRequestorFilter(); renderDashboard();
+  checkSupabaseConnection();
+}
+
+function filtered(){
+  const r=filterRequestor.value, s=filterStatus.value, q=searchBox.value.toLowerCase();
+  return tickets
+    .filter(x=>(r==='All'||x.requestor===r)&&(s==='All'||x.status===s)&&((x.subject||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.requestor||'').toLowerCase().includes(q)||(x.staff_id||'').toLowerCase().includes(q)))
+    .sort((a,b)=>new Date(b.date_submitted || b.created_at || 0)-new Date(a.date_submitted || a.created_at || 0));
+}
+function resetPageAndRender(){ currentPage = 1; renderDashboard(); }
+function changeRowsPerPage(v){ rowsPerPage = Number(v)||10; localStorage.setItem('ticket_rows_per_page', String(rowsPerPage)); currentPage = 1; renderDashboard(); }
+function changePage(page){
+  const totalPages = Math.max(1, Math.ceil(filtered().length / rowsPerPage));
+  currentPage = Math.min(Math.max(1, page), totalPages);
+  renderDashboard();
+}
+function renderPagination(totalRows,totalPages,start,end){
+  const info = document.getElementById('pageInfo');
+  const nums = document.getElementById('pageNumbers');
+  if(info) info.textContent = totalRows ? `Showing ${start+1}–${end} of ${totalRows}` : 'Showing 0–0 of 0';
+  if(!nums) return;
+  const pages=[];
+  const add=p=>{ if(!pages.includes(p) && p>=1 && p<=totalPages) pages.push(p); };
+  add(1); add(2); add(currentPage-1); add(currentPage); add(currentPage+1); add(totalPages-1); add(totalPages);
+  pages.sort((a,b)=>a-b);
+  let html='', last=0;
+  pages.forEach(p=>{ if(p-last>1) html += `<button class="page-btn dots" disabled>…</button>`; html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="changePage(${p})">${p}</button>`; last=p; });
+  nums.innerHTML = html;
+  const navs = document.querySelectorAll('.page-nav');
+  if(navs[0]) navs[0].disabled = currentPage<=1;
+  if(navs[1]) navs[1].disabled = currentPage>=totalPages;
+}
+function buildRequestorFilter(){
+  const current=filterRequestor.value; const names=[...new Set(tickets.map(x=>x.requestor).filter(Boolean))].sort();
+  filterRequestor.innerHTML='<option value="All">All</option>'+names.map(n=>`<option>${n}</option>`).join(''); filterRequestor.value=names.includes(current)?current:'All';
+}
+function renderDashboard(){
+  const data=filtered();
+  const totalRows = data.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+  if(currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * rowsPerPage;
+  const end = Math.min(start + rowsPerPage, totalRows);
+  const pageData = data.slice(start, end);
+
+  total.textContent=totalRows;
+  submitted.textContent=data.filter(x=>x.status==='Submitted').length;
+  completed.textContent=data.filter(x=>x.status==='Completed').length;
+  inprogress.textContent=data.filter(x=>x.status==='In-progress').length;
+
+  ticketBody.innerHTML=pageData.map(x=>`<tr>
+    <td class="ticket-id-cell">${ticketNo(x.id)}</td>
+    <td>${escapeHtml(x.staff_id||'')}</td>
+    <td>${escapeHtml(x.requestor||'')}</td>
+    <td><span class="cell-text">${escapeHtml(x.subject||'')}</span></td>
+    <td><span class="cell-text">${escapeHtml(x.description||'')}</span></td>
+    <td><span class="priority-pill priority-${escapeHtml(x.priority||'Normal')}">${escapeHtml(x.priority||'')}</span></td>
+    <td class="status ${x.status}"><span class="status-pill">${statusIcon(x.status)} ${x.status||''}</span></td>
+    <td>${fmt(x.date_submitted)}</td>
+    <td class="solve-date">${fmt(x.date_solve)}</td>
+    <td>${isAdmin?`<select class="admin-select" onchange="updateStatus('${x.id}',this.value)"><option ${sel(x.status,'Submitted')}>Submitted</option><option ${sel(x.status,'In-progress')}>In-progress</option><option ${sel(x.status,'Pending')}>Pending</option><option ${sel(x.status,'Completed')}>Completed</option><option ${sel(x.status,'Cancel')}>Cancel</option></select>`:'<span class="admin-only-pill">Admin only</span>'}</td>
+    <td>${isAdmin?`<textarea class="comment-box" placeholder="Admin comments..." onblur="updateComment('${x.id}', this.value)">${escapeHtml(x.comments||x.comment||'')}</textarea>`:`<span class="cell-text">${escapeHtml(x.comments||x.comment||'')}</span>`}</td>
+    <td>${isAdmin?`<button class="delete-btn" title="Delete ticket" onclick="confirmDelete('${x.id}')">🗑️</button>`:'<span class="admin-only-pill">Admin only</span>'}</td>
+  </tr>`).join('') || '<tr><td colspan="12" class="no-data">No data</td></tr>';
+
+  renderPagination(totalRows,totalPages,start,end);
+  drawCharts(data); updateAdminUI();
+}
+function fmt(d){return d?new Date(d).toLocaleString('en-GB',{hour12:false}):''} function sel(a,b){return a===b?'selected':''}
+function statusIcon(s){return s==='Submitted'?'📨':s==='Completed'?'✅':s==='In-progress'?'⌛':s==='Pending'?'🔵':'❌'}
+
+function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));}
+async function updateComment(id,commentText){
+  if(!isAdmin){ alert('Chỉ Admin mới được chỉnh Comments.'); renderDashboard(); return; }
+  const payload={comments:commentText};
+  if(supabaseClient){
+    const {error}=await supabaseClient.from(TABLE_NAME).update(payload).eq('id',id);
+    if(error){alert('Update comment failed: '+error.message+'\nKiểm tra Supabase có cột comments chưa.'); return;}
+  }else{
+    let local=JSON.parse(localStorage.getItem(TABLE_NAME)||'[]');
+    local=local.map(x=>String(x.id)===String(id)?{...x,comments:commentText}:x);
+    localStorage.setItem(TABLE_NAME,JSON.stringify(local));
+  }
+  const row=tickets.find(x=>String(x.id)===String(id));
+  if(row) row.comments=commentText;
+}
+async function updateStatus(id,newStatus){
+  if(!isAdmin){ alert('Chỉ Admin mới được chỉnh Status / Date Solve. Vui lòng nhập password.'); renderDashboard(); return; }
+  const solved=newStatus==='Completed'?new Date().toISOString():null;
+  if(supabaseClient){const {error}=await supabaseClient.from(TABLE_NAME).update({status:newStatus,date_solve:solved}).eq('id',id); if(error){alert(error.message);return;}}
+  else{let local=JSON.parse(localStorage.getItem(TABLE_NAME)||'[]'); local=local.map(x=>String(x.id)===String(id)?{...x,status:newStatus,date_solve:solved}:x); localStorage.setItem(TABLE_NAME,JSON.stringify(local));}
+  await loadTickets();
+}
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.className = 'toast show';
+  setTimeout(()=>toast.className='toast', 2200);
+}
+function confirmDelete(id){
+  if(!isAdmin){ alert('Chỉ Admin mới được xóa ticket.'); return; }
+  deleteID = id;
+  deleteModal.style.display = 'flex';
+}
+function closeDeleteModal(){
+  deleteID = null;
+  deleteModal.style.display = 'none';
+}
+function deleteBackdropClose(e){ if(e.target.id === 'deleteModal') closeDeleteModal(); }
+async function deleteTicket(){
+  if(!isAdmin){ alert('Chỉ Admin mới được xóa ticket.'); closeDeleteModal(); return; }
+  if(deleteID == null) return;
+  if(supabaseClient){
+    const {error}=await supabaseClient.from(TABLE_NAME).delete().eq('id', deleteID);
+    if(error){alert('Delete failed: '+error.message);return;}
+  }else{
+    let local=JSON.parse(localStorage.getItem(TABLE_NAME)||'[]');
+    local=local.filter(x=>String(x.id)!==String(deleteID));
+    localStorage.setItem(TABLE_NAME,JSON.stringify(local));
+  }
+  closeDeleteModal();
+  await loadTickets();
+  showToast('✔ Ticket deleted successfully');
+}
+
+function drawCharts(data){
+  const done = data.filter(x => x.status === 'Completed').length;
+  const remain = Math.max(data.length - done, 0);
+  const pct = data.length ? Math.round(done / data.length * 100) : 0;
+
+  if (progressChart) progressChart.destroy();
+  progressChart = new Chart(document.getElementById('progressChart'), {
+    type: 'doughnut',
+    data: {
+      labels: [`Completed (${done})`, `Remaining (${remain})`],
+      datasets: [{
+        data: [done, remain],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      layout: { padding: { top: 6, right: 20, bottom: 8, left: 8 } },
+      plugins: {
+        title: {
+          display: true,
+          text: `${pct}% Completed`,
+          font: { size: 14, weight: '700' },
+          padding: { bottom: 10 }
+        },
+        legend: {
+          display: true,
+          position: 'right',
+          align: 'center',
+          labels: {
+            boxWidth: 34,
+            boxHeight: 12,
+            padding: 14,
+            font: { size: 13 }
+          }
+        },
+        tooltip: { enabled: true }
+      }
+    }
+  });
+
+  const month = {};
+  data.forEach(x => {
+    const d = new Date(x.date_submitted);
+    if (isNaN(d)) return;
+    const k = String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    month[k] = (month[k] || 0) + 1;
+  });
+
+  if (monthChart) monthChart.destroy();
+  monthChart = new Chart(document.getElementById('monthChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(month),
+      datasets: [{
+        label: 'Requests',
+        data: Object.values(month),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 8, right: 18, bottom: 4, left: 8 } },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 12 } } },
+        tooltip: { enabled: true }
+      },
+      scales: {
+        x: { ticks: { maxRotation: 0, font: { size: 12 } } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 12 } } }
+      }
+    }
+  });
+}
+applyCompact();
+checkSupabaseConnection();
+loadTickets();
+</script>
+</body>
+</html>
