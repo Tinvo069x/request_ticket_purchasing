@@ -96,6 +96,32 @@
     .chart-wrap canvas{width:100%!important;height:100%!important;display:block;}
     body.compact .panel-grid{display:none;}
     @media(max-width:900px){.chart-panel{height:250px}.chart-wrap{min-height:190px}}
+
+    /* ===== Request Heatmap (GitHub-style, responsive fit) ===== */
+    .heatmap-panel{display:flex;flex-direction:column;overflow:hidden;}
+    .heatmap-panel h3{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+    .heatmap-clear-pill{display:inline-flex;align-items:center;gap:5px;background:#eef4ff;color:#0057ff;border:1px solid #cfe0ff;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;}
+    .heatmap-clear-pill:hover{background:#0057ff;color:#fff;border-color:#0057ff;}
+    .heatmap-clear-pill .x{font-weight:900;}
+    .heatmap-container{flex:1;min-height:110px;width:100%;overflow:hidden;display:flex;flex-direction:column;}
+    .heatmap-top{display:flex;width:100%;}
+    .heatmap-corner{width:26px;flex:0 0 auto;}
+    .heatmap-monthrow{position:relative;height:14px;flex:1 1 auto;min-width:0;}
+    .heatmap-month-label{position:absolute;top:0;font-size:10px;color:#6b7280;white-space:nowrap;}
+    .heatmap-body{display:flex;width:100%;flex:1;min-height:0;}
+    .heatmap-daylabels{display:flex;flex-direction:column;gap:2px;width:26px;flex:0 0 auto;font-size:9px;color:#6b7280;}
+    .heatmap-daylabels div{flex:1;display:flex;align-items:center;}
+    .heatmap-weeks{display:flex;gap:2px;width:100%;flex:1;min-width:0;}
+    .heatmap-week{display:flex;flex-direction:column;gap:2px;flex:1 1 0;min-width:0;}
+    .heatmap-day{width:100%;flex:1;border-radius:2px;background:#ebedf0;cursor:pointer;transition:transform .1s;box-sizing:border-box;}
+    .heatmap-day:hover{outline:2px solid #0057ff;outline-offset:-1px;}
+    .heatmap-day.selected{outline:2px solid #dc2626;outline-offset:-1px;box-shadow:0 0 0 1px #fff inset;}
+    .heatmap-day.lvl-1{background:#cfe3ff}
+    .heatmap-day.lvl-2{background:#8fbcff}
+    .heatmap-day.lvl-3{background:#3d8bff}
+    .heatmap-day.lvl-4{background:#0057ff}
+    .heatmap-legend{display:flex;align-items:center;gap:4px;font-size:11px;color:#6b7280;margin-top:6px;justify-content:flex-end;flex:0 0 auto;}
+    .heatmap-legend .heatmap-day{width:11px;height:11px;flex:0 0 auto;margin:0 1px;cursor:default;}
   </style>
 
   <style>
@@ -304,7 +330,16 @@
 
       <section class="panel-grid">
         <div class="panel chart-panel"><h3>Progress Overview</h3><div class="chart-wrap"><canvas id="progressChart"></canvas></div></div>
-        <div class="panel chart-panel"><h3>Request by Month</h3><div class="chart-wrap"><canvas id="monthChart"></canvas></div></div>
+        <div class="panel chart-panel heatmap-panel"><h3 id="heatmapTitle">Request Heatmap</h3>
+          <div class="heatmap-container">
+            <div class="heatmap-top"><div class="heatmap-corner"></div><div class="heatmap-monthrow" id="heatmapMonths"></div></div>
+            <div class="heatmap-body">
+              <div class="heatmap-daylabels"><div>&nbsp;</div><div>Mon</div><div>&nbsp;</div><div>Wed</div><div>&nbsp;</div><div>Fri</div><div>&nbsp;</div></div>
+              <div class="heatmap-weeks" id="heatmapWeeks"></div>
+            </div>
+          </div>
+          <div class="heatmap-legend">Less <span class="heatmap-day"></span><span class="heatmap-day lvl-1"></span><span class="heatmap-day lvl-2"></span><span class="heatmap-day lvl-3"></span><span class="heatmap-day lvl-4"></span> More</div>
+        </div>
       </section>
 
       <section class="table-panel">
@@ -413,7 +448,7 @@
 const SPREADSHEET_ID = "15xbJXVudrJ3clIAa_9xBqjX6ynWHbvO3OzQwVgUvsXo"; // Reference only
 const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwHaRF5YttP0WP858CdXf0MK6oxPfAy1Lfw7il-UhUAobybahs2M9yT0g3TV7yKl0lB1Q/exec"; // Must end with /exec
 const TABLE_NAME = "request_tickets";
-let tickets = [], progressChart, monthChart;
+let tickets = [], progressChart;
 let deleteID = null;
 let currentPage = 1;
 let rowsPerPage = Number(localStorage.getItem("ticket_rows_per_page") || 10);
@@ -427,7 +462,8 @@ function saveFilterState(){
       staff: filterStaff ? filterStaff.value : 'All',
       requestor: filterRequestor ? filterRequestor.value : 'All',
       status: filterStatus ? filterStatus.value : 'All',
-      search: searchBox ? searchBox.value : ''
+      search: searchBox ? searchBox.value : '',
+      heatmapDate: heatmapDateFilter || null
     }));
   }catch(e){}
   updateFilterActiveIndicator();
@@ -456,7 +492,8 @@ function updateFilterActiveIndicator(){
   const active = (filterStaff && filterStaff.value !== 'All') ||
                  (filterRequestor && filterRequestor.value !== 'All') ||
                  (filterStatus && filterStatus.value !== 'All') ||
-                 (searchBox && searchBox.value.trim() !== '');
+                 (searchBox && searchBox.value.trim() !== '') ||
+                 !!heatmapDateFilter;
   dot.style.display = active ? 'block' : 'none';
 }
 
@@ -765,11 +802,21 @@ function clearPowerBISearch(selectId){
 }
 document.addEventListener('click',()=>document.querySelectorAll('.pbi-slicer.open').forEach(x=>x.classList.remove('open')));
 
-function filtered(){
+let heatmapDateFilter = null;
+function ticketDateKey(x){
+  const d = new Date(x.date_submitted);
+  if (isNaN(d)) return '';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function filterCore(includeDateFilter){
   const staff=filterStaff.value, r=filterRequestor.value, s=filterStatus.value, q=searchBox.value.toLowerCase();
-  return tickets
-    .filter(x=>(staff==='All'||String(x.staff_id||'')===staff)&&(r==='All'||x.requestor===r)&&(s==='All'||x.status===s)&&((x.subject||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.requestor||'').toLowerCase().includes(q)||(x.staff_id||'').toLowerCase().includes(q)||(x.category||'').toLowerCase().includes(q)||(isAdmin && (x.link_path||'').toLowerCase().includes(q))))
-    .sort((a,b)=>new Date(b.date_submitted || b.created_at || 0)-new Date(a.date_submitted || a.created_at || 0));
+  return tickets.filter(x=>(staff==='All'||String(x.staff_id||'')===staff)&&(r==='All'||x.requestor===r)&&(s==='All'||x.status===s)&&((x.subject||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.requestor||'').toLowerCase().includes(q)||(x.staff_id||'').toLowerCase().includes(q)||(x.category||'').toLowerCase().includes(q)||(isAdmin && (x.link_path||'').toLowerCase().includes(q)))&&(!includeDateFilter||!heatmapDateFilter||ticketDateKey(x)===heatmapDateFilter));
+}
+function filtered(){
+  return filterCore(true).sort((a,b)=>new Date(b.date_submitted || b.created_at || 0)-new Date(a.date_submitted || a.created_at || 0));
+}
+function filteredForCharts(){
+  return filterCore(false).sort((a,b)=>new Date(b.date_submitted || b.created_at || 0)-new Date(a.date_submitted || a.created_at || 0));
 }
 function resetPageAndRender(){ currentPage = 1; renderDashboard(); }
 function changeRowsPerPage(v){ rowsPerPage = Number(v)||10; localStorage.setItem('ticket_rows_per_page', String(rowsPerPage)); currentPage = 1; renderDashboard(); }
@@ -812,6 +859,7 @@ function buildSidebarFilters(){
     const savedStatus = savedFilterState.status || 'All';
     if([...filterStatus.options].some(o=>o.value===savedStatus)) filterStatus.value = savedStatus;
     if(typeof savedFilterState.search === 'string') searchBox.value = savedFilterState.search;
+    if(savedFilterState.heatmapDate) heatmapDateFilter = savedFilterState.heatmapDate;
     filterStateRestored = true;
   }
 
@@ -851,7 +899,7 @@ function renderDashboard(){
   </tr>`).join('') || '<tr><td colspan="15" class="no-data">No data</td></tr>';
 
   renderPagination(totalRows,totalPages,start,end);
-  drawCharts(data); updateAdminUI();
+  drawCharts(filteredForCharts()); updateAdminUI();
 }
 function fmt(d){return d?new Date(d).toLocaleString('en-GB',{hour12:false}):''} function sel(a,b){return a===b?'selected':''}
 function statusIcon(s){return s==='Submitted'?'📨':s==='Completed'?'✅':s==='In-progress'?'⌛':s==='Pending'?'🔵':'❌'}
@@ -968,39 +1016,94 @@ function drawCharts(data){
     }
   });
 
-  const month = {};
+  renderHeatmap(data);
+}
+
+function renderHeatmap(data){
+  const counts = {};
   data.forEach(x => {
-    const d = new Date(x.date_submitted);
-    if (isNaN(d)) return;
-    const k = String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
-    month[k] = (month[k] || 0) + 1;
+    const key = ticketDateKey(x);
+    if (!key) return;
+    counts[key] = (counts[key] || 0) + 1;
   });
 
-  if (monthChart) monthChart.destroy();
-  monthChart = new Chart(document.getElementById('monthChart'), {
-    type: 'bar',
-    data: {
-      labels: Object.keys(month),
-      datasets: [{
-        label: 'Requests',
-        data: Object.values(month),
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { top: 8, right: 18, bottom: 4, left: 8 } },
-      plugins: {
-        legend: { display: true, position: 'top', labels: { font: { size: 12 } } },
-        tooltip: { enabled: true }
-      },
-      scales: {
-        x: { ticks: { maxRotation: 0, font: { size: 12 } } },
-        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 12 } } }
-      }
+  const weeksHost = document.getElementById('heatmapWeeks');
+  const monthsHost = document.getElementById('heatmapMonths');
+  const titleEl = document.getElementById('heatmapTitle');
+  if (!weeksHost || !monthsHost) return;
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const rangeStart = new Date(today); rangeStart.setDate(rangeStart.getDate() - 364);
+  const startDay = new Date(rangeStart); startDay.setDate(startDay.getDate() - startDay.getDay());
+  const endDay = new Date(today); endDay.setDate(endDay.getDate() + (6 - endDay.getDay()));
+
+  const weeks = [];
+  let cur = new Date(startDay);
+  while (cur <= endDay) {
+    const week = [];
+    for (let i = 0; i < 7; i++) { week.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
+    weeks.push(week);
+  }
+  const totalWeeks = weeks.length;
+
+  const maxCount = Math.max(0, ...Object.values(counts));
+  const levelFor = c => {
+    if (!c) return 0;
+    if (maxCount <= 1) return 4;
+    const ratio = c / maxCount;
+    return ratio > 0.75 ? 4 : ratio > 0.5 ? 3 : ratio > 0.25 ? 2 : 1;
+  };
+
+  weeksHost.innerHTML = '';
+  monthsHost.innerHTML = '';
+  let totalInRange = 0;
+
+  weeks.forEach((week, wi) => {
+    const weekEl = document.createElement('div');
+    weekEl.className = 'heatmap-week';
+    weekEl.style.flexBasis = (100 / totalWeeks) + '%';
+    const firstOfMonthDay = week.find(d => d.getDate() === 1 && d >= startDay);
+    if (firstOfMonthDay) {
+      const label = document.createElement('div');
+      label.className = 'heatmap-month-label';
+      label.style.left = ((wi / totalWeeks) * 100) + '%';
+      label.textContent = firstOfMonthDay.toLocaleString('en-US', { month: 'short' });
+      monthsHost.appendChild(label);
     }
+    week.forEach(d => {
+      const cell = document.createElement('div');
+      cell.className = 'heatmap-day';
+      const inRange = d >= rangeStart && d <= today;
+      if (!inRange) {
+        cell.style.visibility = 'hidden';
+      } else {
+        const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const c = counts[key] || 0;
+        totalInRange += c;
+        const lvl = levelFor(c);
+        if (lvl) cell.classList.add('lvl-' + lvl);
+        if (key === heatmapDateFilter) cell.classList.add('selected');
+        cell.title = `${c} request${c === 1 ? '' : 's'} on ${d.toLocaleDateString('en-GB')} — click to filter table`;
+        cell.onclick = () => selectHeatmapDate(key);
+      }
+      weekEl.appendChild(cell);
+    });
+    weeksHost.appendChild(weekEl);
   });
+
+  if (titleEl) {
+    titleEl.innerHTML = `${totalInRange} requests in last 12 months` +
+      (heatmapDateFilter ? ` <span class="heatmap-clear-pill" onclick="selectHeatmapDate('${heatmapDateFilter}')">📅 ${dateKeyToDisplay(heatmapDateFilter)} <span class="x">✕</span></span>` : '');
+  }
+}
+function dateKeyToDisplay(key){
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB');
+}
+function selectHeatmapDate(dateKey){
+  heatmapDateFilter = (heatmapDateFilter === dateKey) ? null : dateKey;
+  saveFilterState();
+  resetPageAndRender();
 }
 applyCompact();
 applySidebarCollapsed();
