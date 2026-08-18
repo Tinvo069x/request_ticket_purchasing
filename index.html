@@ -229,13 +229,48 @@
     .pbi-slicer-option.selected{background:#dbeafe;font-weight:700;color:#1d4ed8;}
     .pbi-slicer-option input{accent-color:#2563eb;pointer-events:none;}
     .pbi-slicer-empty{padding:12px;color:#6b7280;font-size:12px;text-align:center;}
+
+    /* ===== Sidebar collapse ===== */
+    :root{--side-w-collapsed:64px;}
+    .side{transition:width .25s ease,padding .25s ease;}
+    .main{transition:margin-left .25s ease,width .25s ease;}
+    .sidebar-toggle{position:absolute;top:14px;right:-14px;width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:#0b3f9e;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;font-weight:900;z-index:30;box-shadow:0 4px 10px rgba(0,0,0,.25);transition:.2s;}
+    .sidebar-toggle:hover{background:#1d64e8;transform:scale(1.06);}
+    .filter-active-dot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid #0b3f9e;display:none;}
+    .side{position:fixed;}
+    body.sidebar-collapsed .side{width:var(--side-w-collapsed);padding:14px 8px;overflow:visible;}
+    body.sidebar-collapsed .main{margin-left:var(--side-w-collapsed);width:calc(100% - var(--side-w-collapsed));}
+    body.sidebar-collapsed .brand small,
+    body.sidebar-collapsed .new-btn span,
+    body.sidebar-collapsed .clock,
+    body.sidebar-collapsed .filter label,
+    body.sidebar-collapsed .filter .pbi-slicer,
+    body.sidebar-collapsed .filter .native-slicer,
+    body.sidebar-collapsed .company-brand img,
+    body.sidebar-collapsed .company-brand-title,
+    body.sidebar-collapsed .company-brand-subtitle,
+    body.sidebar-collapsed .admin-login span,
+    body.sidebar-collapsed .help{display:none!important;}
+    body.sidebar-collapsed .brand{font-size:0;}
+    body.sidebar-collapsed .brand::before{content:"RT";display:block;font-size:18px;text-align:center;}
+    body.sidebar-collapsed .new-btn{font-size:0;padding:11px 0;}
+    body.sidebar-collapsed .new-btn::before{content:"＋";font-size:20px;}
+    body.sidebar-collapsed .filter{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+    body.sidebar-collapsed .filter::before{content:"⏷";font-size:16px;opacity:.8;}
+    body.sidebar-collapsed .company-brand{padding:10px 0;}
+    body.sidebar-collapsed .admin-login{padding:0;height:44px;}
+    body.sidebar-collapsed .help{display:none;}
+    @media(max-width:900px){
+      .sidebar-toggle{display:none;}
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <aside class="side">
+      <button class="sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Thu gọn/Mở sidebar">‹<span id="filterActiveDot" class="filter-active-dot" title="Đang có bộ lọc hoạt động"></span></button>
       <div class="brand">REQUEST TICKET <small>By User</small></div>
-      <button class="new-btn" onclick="openModal()">＋ New Request 👆</button>
+      <button class="new-btn" onclick="openModal()"><span>＋ New Request 👆</span></button>
       <div id="clock" class="clock"></div>
       <div class="filter">
         <label>ID SAP</label>
@@ -274,7 +309,7 @@
 
       <section class="table-panel">
         <div class="toolbar">
-          <input id="searchBox" placeholder="Search subject / description..." oninput="resetPageAndRender()">
+          <input id="searchBox" placeholder="Search subject / description..." oninput="saveFilterState();resetPageAndRender()">
           <button class="btn ghost" onclick="loadTickets(true)">Refresh</button>
           <button id="compactBtn" class="btn compact-toggle" onclick="toggleCompact()">Compact View</button>
           <div class="rows-control">
@@ -382,8 +417,49 @@ let tickets = [], progressChart, monthChart;
 let deleteID = null;
 let currentPage = 1;
 let rowsPerPage = Number(localStorage.getItem("ticket_rows_per_page") || 10);
+function loadFilterState(){
+  try{ return JSON.parse(localStorage.getItem('ticket_filter_state') || '{}'); }
+  catch(e){ return {}; }
+}
+function saveFilterState(){
+  try{
+    localStorage.setItem('ticket_filter_state', JSON.stringify({
+      staff: filterStaff ? filterStaff.value : 'All',
+      requestor: filterRequestor ? filterRequestor.value : 'All',
+      status: filterStatus ? filterStatus.value : 'All',
+      search: searchBox ? searchBox.value : ''
+    }));
+  }catch(e){}
+  updateFilterActiveIndicator();
+}
+const savedFilterState = loadFilterState();
 let isAdmin = sessionStorage.getItem("ticket_admin") === "true" || localStorage.getItem("ticket_admin_remember") === "true";
 const ADMIN_PASSWORD = "tin"; // Must match ADMIN_KEY in Google Apps Script
+let isSidebarCollapsed = localStorage.getItem('ticket_sidebar_collapsed') === 'true';
+function applySidebarCollapsed(){
+  document.body.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
+  const btn = document.getElementById('sidebarToggleBtn');
+  if(btn){
+    const dot = document.getElementById('filterActiveDot');
+    btn.childNodes[0].nodeValue = isSidebarCollapsed ? '›' : '‹';
+    if(dot) btn.appendChild(dot);
+  }
+}
+function toggleSidebar(){
+  isSidebarCollapsed = !isSidebarCollapsed;
+  localStorage.setItem('ticket_sidebar_collapsed', isSidebarCollapsed ? 'true' : 'false');
+  applySidebarCollapsed();
+}
+function updateFilterActiveIndicator(){
+  const dot = document.getElementById('filterActiveDot');
+  if(!dot) return;
+  const active = (filterStaff && filterStaff.value !== 'All') ||
+                 (filterRequestor && filterRequestor.value !== 'All') ||
+                 (filterStatus && filterStatus.value !== 'All') ||
+                 (searchBox && searchBox.value.trim() !== '');
+  dot.style.display = active ? 'block' : 'none';
+}
+
 let isCompact = localStorage.getItem("ticket_compact_view") === "true";
 let isSubmitting = false;
 function applyCompact(){
@@ -657,6 +733,7 @@ function choosePowerBIOption(selectId,value,event){
   select.value=value;
   document.getElementById('pbi_'+selectId)?.classList.remove('open');
   refreshPowerBISlicers();
+  saveFilterState();
   resetPageAndRender();
 }
 function clearPowerBISlicer(selectId,event){
@@ -664,6 +741,7 @@ function clearPowerBISlicer(selectId,event){
   const select=document.getElementById(selectId);
   select.value='All';
   refreshPowerBISlicers();
+  saveFilterState();
   resetPageAndRender();
 }
 function filterPowerBIOptions(selectId,keyword){
@@ -716,18 +794,28 @@ function renderPagination(totalRows,totalPages,start,end){
   if(navs[0]) navs[0].disabled = currentPage<=1;
   if(navs[1]) navs[1].disabled = currentPage>=totalPages;
 }
+let filterStateRestored = false;
 function buildSidebarFilters(){
-  const currentStaff=filterStaff.value;
+  const restoring = !filterStateRestored;
+  const currentStaff = restoring ? (savedFilterState.staff || 'All') : filterStaff.value;
   const staffIds=[...new Set(tickets.map(x=>String(x.staff_id||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
   filterStaff.innerHTML='<option value="All">All</option>'+staffIds.map(id=>`<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
   filterStaff.value=staffIds.includes(currentStaff)?currentStaff:'All';
 
-  const currentRequestor=filterRequestor.value;
+  const currentRequestor = restoring ? (savedFilterState.requestor || 'All') : filterRequestor.value;
   const names=[...new Set(tickets.map(x=>x.requestor).filter(Boolean))].sort();
   filterRequestor.innerHTML='<option value="All">All</option>'+names.map(n=>`<option>${escapeHtml(n)}</option>`).join('');
   filterRequestor.value=names.includes(currentRequestor)?currentRequestor:'All';
 
+  if(restoring){
+    const savedStatus = savedFilterState.status || 'All';
+    if([...filterStatus.options].some(o=>o.value===savedStatus)) filterStatus.value = savedStatus;
+    if(typeof savedFilterState.search === 'string') searchBox.value = savedFilterState.search;
+    filterStateRestored = true;
+  }
+
+  updateFilterActiveIndicator();
   refreshPowerBISlicers();
 }
 function renderDashboard(){
@@ -915,6 +1003,7 @@ function drawCharts(data){
   });
 }
 applyCompact();
+applySidebarCollapsed();
 checkGoogleSheetConnection();
 loadTickets();
 </script>
