@@ -34,8 +34,21 @@
     .est-complete-value{display:inline-block;min-width:100px;font-weight:800;white-space:nowrap;color:#374151;}
     .est-complete-value.tbd{color:#b45309;background:#fef3c7;padding:5px 9px;border-radius:999px;}
     .est-complete-empty{color:#9ca3af;}
-    .compact-toggle{background:#eef4ff;color:#0057ff;border:1px solid #cfe0ff;}
-    .compact-toggle.active{background:#0057ff;color:#fff;}
+    .compact-toggle{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-width:190px;
+      background:linear-gradient(180deg,#f5f9ff 0%,#e8f1ff 100%);color:#0b57ff;border:1px solid #c9dcff;
+      box-shadow:0 8px 18px rgba(0,87,255,.10), inset 0 1px 0 rgba(255,255,255,.85);position:relative;overflow:hidden;
+      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;}
+    .compact-toggle::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.55) 36%,transparent 68%);transform:translateX(-120%);transition:transform .65s ease;}
+    .compact-toggle:hover{transform:translateY(-1px);border-color:#9fc2ff;box-shadow:0 12px 22px rgba(0,87,255,.16), inset 0 1px 0 rgba(255,255,255,.95);}
+    .compact-toggle:hover::before{transform:translateX(120%);}
+    .compact-toggle:active{transform:translateY(0) scale(.99);}
+    .compact-toggle.active{background:linear-gradient(180deg,#0f67ff 0%,#0057ff 100%);color:#fff;border-color:#0057ff;box-shadow:0 12px 26px rgba(0,87,255,.24);}
+    .compact-btn-content{display:inline-flex;align-items:center;gap:10px;position:relative;z-index:1;}
+    .compact-toggle-icon-wrap{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:rgba(11,87,255,.10);border:1px solid rgba(11,87,255,.12);flex:0 0 auto;transition:background .18s ease,border-color .18s ease,transform .18s ease;}
+    .compact-toggle:hover .compact-toggle-icon-wrap{transform:rotate(-4deg) scale(1.03);}
+    .compact-toggle.active .compact-toggle-icon-wrap{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.24);}
+    .compact-toggle svg{width:18px;height:18px;display:block;}
+    .compact-toggle-label{font-weight:800;letter-spacing:.1px;white-space:nowrap;}
     body.compact .config, body.compact .panel-grid{display:none;}
     body.compact .cards{grid-template-columns:repeat(4,1fr);margin-bottom:10px;}
     body.compact .card{min-height:64px;padding:10px 16px;}
@@ -490,7 +503,7 @@
         <div class="toolbar">
           <input id="searchBox" placeholder="Search subject / description..." oninput="saveFilterState();resetPageAndRender()">
           <button class="btn ghost" onclick="loadTickets(true)">Refresh</button>
-          <button id="compactBtn" class="btn compact-toggle" onclick="toggleCompact()">Compact View</button>
+          <button id="compactBtn" class="btn compact-toggle" onclick="toggleCompact()" aria-label="Toggle compact view"></button>
           <div class="rows-control">
             <span>Rows</span>
             <select id="rowsPerPageSelect" onchange="changeRowsPerPage(this.value)">
@@ -645,12 +658,21 @@ function updateFilterActiveIndicator(){
 
 let isCompact = localStorage.getItem("ticket_compact_view") === "true";
 let isSubmitting = false;
+function getCompactButtonMarkup(){
+  const compactIcon = `<span class="compact-toggle-icon-wrap" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="5" width="6" height="6" rx="1.5" fill="currentColor" opacity=".95"/><rect x="14" y="5" width="6" height="6" rx="1.5" fill="currentColor" opacity=".72"/><rect x="4" y="13" width="6" height="6" rx="1.5" fill="currentColor" opacity=".72"/><rect x="14" y="13" width="6" height="6" rx="1.5" fill="currentColor" opacity=".95"/></svg></span>`;
+  const fullIcon = `<span class="compact-toggle-icon-wrap" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 4H5v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 4h4v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 20H5v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 20h-4v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  return isCompact
+    ? `<span class="compact-btn-content">${fullIcon}<span class="compact-toggle-label">Full View</span></span>`
+    : `<span class="compact-btn-content">${compactIcon}<span class="compact-toggle-label">Compact View</span></span>`;
+}
 function applyCompact(){
   document.body.classList.toggle('compact', isCompact);
   const btn = document.getElementById('compactBtn');
   if(btn){
-    btn.textContent = isCompact ? 'Full View' : 'Compact View';
+    btn.innerHTML = getCompactButtonMarkup();
     btn.classList.toggle('active', isCompact);
+    btn.title = isCompact ? 'Switch back to full dashboard view' : 'Switch to compact view';
+    btn.setAttribute('aria-pressed', isCompact ? 'true' : 'false');
   }
   const rps = document.getElementById('rowsPerPageSelect');
   if(rps) rps.value = String(rowsPerPage);
