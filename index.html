@@ -72,19 +72,42 @@
 
 
   <style>
-    /* ===== Google Sheet Connection Status Badge ===== */
+    /* ===== Google Sheet Connection Status Dot ===== */
     .db-status{
-      margin-left:0;
-      padding:8px 13px;
-      border-radius:999px;
-      font-size:13px;
-      font-weight:600;
-      white-space:nowrap;
-      border:1px solid transparent;
+      margin-left:2px;
+      width:14px;
+      height:14px;
+      min-width:14px;
+      padding:0;
+      border-radius:50%;
+      display:inline-block;
+      vertical-align:middle;
+      font-size:0;              /* hide status text, keep JS logic unchanged */
+      line-height:0;
+      overflow:hidden;
+      border:2px solid rgba(255,255,255,.95);
+      box-shadow:0 0 0 1px rgba(17,24,39,.10), 0 2px 6px rgba(17,24,39,.14);
+      flex:0 0 auto;
+      transition:background .2s ease, box-shadow .2s ease, transform .2s ease;
     }
-    .db-status.connected{background:#dcfce7;color:#15803d;border-color:#bbf7d0;}
-    .db-status.offline{background:#fee2e2;color:#b91c1c;border-color:#fecaca;}
-    .db-status.connecting{background:#fef3c7;color:#b45309;border-color:#fde68a;}
+    .db-status.connected{
+      background:#22c55e;
+      animation:dbPulse 2s ease-in-out infinite;
+    }
+    .db-status.connecting{
+      background:#f59e0b;
+      animation:dbBlink 1s ease-in-out infinite;
+    }
+    .db-status.offline{
+      background:#ef4444;
+      animation:none;
+    }
+    .db-status:hover{transform:scale(1.18);}
+    @keyframes dbPulse{
+      0%,100%{box-shadow:0 0 0 1px rgba(17,24,39,.10),0 2px 6px rgba(17,24,39,.14),0 0 0 0 rgba(34,197,94,.28);}
+      50%{box-shadow:0 0 0 1px rgba(17,24,39,.10),0 2px 6px rgba(17,24,39,.14),0 0 0 5px rgba(34,197,94,0);}
+    }
+    @keyframes dbBlink{0%,100%{opacity:1}50%{opacity:.45}}
   </style>
 
 
@@ -290,13 +313,134 @@
       .sidebar-toggle{display:none;}
     }
   </style>
+
+
+  <style>
+    /* ===== Animated New Request Button (UI only - original logic preserved) ===== */
+    .new-btn{
+      position:relative;
+      isolation:isolate;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      min-height:48px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.78);
+      background:linear-gradient(135deg,#2f7df5 0%,#1d64e8 48%,#0f4fc8 100%);
+      color:#fff;
+      letter-spacing:.1px;
+      box-shadow:
+        0 8px 20px rgba(4,31,95,.25),
+        inset 0 1px 0 rgba(255,255,255,.22);
+      transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease,filter .22s ease;
+      animation:newRequestGlow 3.2s ease-in-out infinite;
+    }
+    .new-btn > span{
+      position:relative;
+      z-index:2;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+    }
+    .new-btn::after{
+      content:"";
+      position:absolute;
+      z-index:1;
+      top:-45%;
+      bottom:-45%;
+      left:-55%;
+      width:34%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.40),transparent);
+      transform:skewX(-18deg);
+      animation:newRequestShine 4.2s ease-in-out infinite;
+      pointer-events:none;
+    }
+    .new-plus{
+      display:inline-grid;
+      place-items:center;
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.24);
+      font-size:17px;
+      line-height:1;
+      font-weight:900;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+      transition:transform .25s ease,background .25s ease;
+      animation:newPlusPulse 2.6s ease-in-out infinite;
+    }
+    .new-label{font-weight:800;white-space:nowrap;}
+    .new-hand{
+      display:inline-block;
+      transform-origin:55% 88%;
+      animation:newHandTap 2.2s ease-in-out infinite;
+      filter:drop-shadow(0 1px 1px rgba(0,0,0,.12));
+    }
+    .new-btn:hover{
+      transform:translateY(-2px) scale(1.015);
+      border-color:#fff;
+      filter:saturate(1.06) brightness(1.04);
+      box-shadow:
+        0 12px 26px rgba(4,31,95,.34),
+        0 0 0 4px rgba(255,255,255,.08),
+        inset 0 1px 0 rgba(255,255,255,.28);
+    }
+    .new-btn:hover .new-plus{
+      transform:rotate(90deg) scale(1.08);
+      background:rgba(255,255,255,.24);
+    }
+    .new-btn:active{
+      transform:translateY(0) scale(.975);
+      box-shadow:0 4px 12px rgba(4,31,95,.24),inset 0 2px 5px rgba(0,0,0,.12);
+    }
+    .new-btn:focus-visible{
+      outline:3px solid rgba(255,255,255,.95);
+      outline-offset:3px;
+    }
+    @keyframes newRequestGlow{
+      0%,100%{box-shadow:0 8px 20px rgba(4,31,95,.25),inset 0 1px 0 rgba(255,255,255,.22)}
+      50%{box-shadow:0 10px 24px rgba(4,31,95,.32),0 0 18px rgba(91,163,255,.22),inset 0 1px 0 rgba(255,255,255,.28)}
+    }
+    @keyframes newRequestShine{
+      0%,58%{left:-55%;opacity:0}
+      64%{opacity:1}
+      82%{left:125%;opacity:.95}
+      100%{left:125%;opacity:0}
+    }
+    @keyframes newPlusPulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.08)}
+    }
+    @keyframes newHandTap{
+      0%,58%,100%{transform:translateY(0) rotate(0deg) scale(1)}
+      66%{transform:translateY(-2px) rotate(-8deg) scale(1.06)}
+      74%{transform:translateY(1px) rotate(5deg) scale(.98)}
+      82%{transform:translateY(0) rotate(0deg) scale(1)}
+    }
+    body.sidebar-collapsed .new-btn{
+      min-height:44px;
+      border-radius:12px;
+      gap:0;
+    }
+    body.sidebar-collapsed .new-btn > span{display:none!important;}
+    body.sidebar-collapsed .new-btn::after{animation-duration:5s;}
+    @media (prefers-reduced-motion: reduce){
+      .new-btn,.new-btn::after,.new-plus,.new-hand{animation:none!important;}
+      .new-btn{transition:none;}
+    }
+  </style>
+
 </head>
 <body>
   <div class="app">
     <aside class="side">
       <button class="sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Thu gọn/Mở sidebar">‹<span id="filterActiveDot" class="filter-active-dot" title="Đang có bộ lọc hoạt động"></span></button>
       <div class="brand">REQUEST TICKET <small>By User</small></div>
-      <button class="new-btn" onclick="openModal()"><span>＋ New Request 👆</span></button>
+      <button class="new-btn" onclick="openModal()" aria-label="New Request"><span><span class="new-plus">+</span><span class="new-label">New Request</span><span class="new-hand" aria-hidden="true">👆</span></span></button>
       <div id="clock" class="clock"></div>
       <div class="filter">
         <label>ID SAP</label>
@@ -329,7 +473,7 @@
       </section>
 
       <section class="panel-grid">
-        <div class="panel chart-panel"><h3>Progress Overview</h3><div class="chart-wrap"><canvas id="progressChart"></canvas></div></div>
+        <div class="panel chart-panel"><h3 id="chartTitle">Monthly Progress</h3><div class="chart-wrap"><canvas id="progressChart"></canvas></div></div>
         <div class="panel chart-panel heatmap-panel"><h3 id="heatmapTitle">Request Heatmap</h3>
           <div class="heatmap-container">
             <div class="heatmap-top"><div class="heatmap-corner"></div><div class="heatmap-monthrow" id="heatmapMonths"></div></div>
@@ -449,6 +593,7 @@ const SPREADSHEET_ID = "15xbJXVudrJ3clIAa_9xBqjX6ynWHbvO3OzQwVgUvsXo"; // Refere
 const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwHaRF5YttP0WP858CdXf0MK6oxPfAy1Lfw7il-UhUAobybahs2M9yT0g3TV7yKl0lB1Q/exec"; // Must end with /exec
 const TABLE_NAME = "request_tickets";
 let tickets = [], progressChart;
+let chartFilter = null; // { month:'YYYY-MM', status:'Completed'|'NotCompleted' }
 let deleteID = null;
 let currentPage = 1;
 let rowsPerPage = Number(localStorage.getItem("ticket_rows_per_page") || 10);
@@ -463,7 +608,8 @@ function saveFilterState(){
       requestor: filterRequestor ? filterRequestor.value : 'All',
       status: filterStatus ? filterStatus.value : 'All',
       search: searchBox ? searchBox.value : '',
-      heatmapDate: heatmapDateFilter || null
+      heatmapDate: heatmapDateFilter || null,
+      chartFilter: chartFilter || null
     }));
   }catch(e){}
   updateFilterActiveIndicator();
@@ -493,7 +639,7 @@ function updateFilterActiveIndicator(){
                  (filterRequestor && filterRequestor.value !== 'All') ||
                  (filterStatus && filterStatus.value !== 'All') ||
                  (searchBox && searchBox.value.trim() !== '') ||
-                 !!heatmapDateFilter;
+                 !!heatmapDateFilter || !!chartFilter;
   dot.style.display = active ? 'block' : 'none';
 }
 
@@ -808,9 +954,14 @@ function ticketDateKey(x){
   if (isNaN(d)) return '';
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+function ticketMonthKey(x){
+  const d = new Date(x.date_submitted);
+  if (isNaN(d)) return '';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
 function filterCore(includeDateFilter){
   const staff=filterStaff.value, r=filterRequestor.value, s=filterStatus.value, q=searchBox.value.toLowerCase();
-  return tickets.filter(x=>(staff==='All'||String(x.staff_id||'')===staff)&&(r==='All'||x.requestor===r)&&(s==='All'||x.status===s)&&((x.subject||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.requestor||'').toLowerCase().includes(q)||(x.staff_id||'').toLowerCase().includes(q)||(x.category||'').toLowerCase().includes(q)||(isAdmin && (x.link_path||'').toLowerCase().includes(q)))&&(!includeDateFilter||!heatmapDateFilter||ticketDateKey(x)===heatmapDateFilter));
+  return tickets.filter(x=>(staff==='All'||String(x.staff_id||'')===staff)&&(r==='All'||x.requestor===r)&&(s==='All'||x.status===s)&&((x.subject||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.requestor||'').toLowerCase().includes(q)||(x.staff_id||'').toLowerCase().includes(q)||(x.category||'').toLowerCase().includes(q)||(isAdmin && (x.link_path||'').toLowerCase().includes(q)))&&(!includeDateFilter||!heatmapDateFilter||ticketDateKey(x)===heatmapDateFilter)&&(!includeDateFilter||!chartFilter||(ticketMonthKey(x)===chartFilter.month&&(chartFilter.status==='Completed'?x.status==='Completed':x.status!=='Completed'))));
 }
 function filtered(){
   return filterCore(true).sort((a,b)=>new Date(b.date_submitted || b.created_at || 0)-new Date(a.date_submitted || a.created_at || 0));
@@ -860,6 +1011,7 @@ function buildSidebarFilters(){
     if([...filterStatus.options].some(o=>o.value===savedStatus)) filterStatus.value = savedStatus;
     if(typeof savedFilterState.search === 'string') searchBox.value = savedFilterState.search;
     if(savedFilterState.heatmapDate) heatmapDateFilter = savedFilterState.heatmapDate;
+    if(savedFilterState.chartFilter && savedFilterState.chartFilter.month) chartFilter = savedFilterState.chartFilter;
     filterStateRestored = true;
   }
 
@@ -973,48 +1125,111 @@ async function deleteTicket(){
   showToast('✔ Ticket deleted successfully');
 }
 
+const barValueLabelPlugin = {
+  id: 'barValueLabelPlugin',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach((bar, i) => {
+        const value = dataset.data[i];
+        if (!value) return;
+        const { x, y } = bar.getCenterPoint();
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.font = '700 12px Segoe UI, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(value), x, y);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+function hexToRgba(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function monthKeyToDisplay(key){
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+function selectChartFilter(month, status){
+  chartFilter = (chartFilter && chartFilter.month === month && chartFilter.status === status) ? null : { month, status };
+  saveFilterState();
+  resetPageAndRender();
+}
+
 function drawCharts(data){
-  const done = data.filter(x => x.status === 'Completed').length;
-  const remain = Math.max(data.length - done, 0);
-  const pct = data.length ? Math.round(done / data.length * 100) : 0;
+  const buckets = {};
+  data.forEach(x => {
+    const d = new Date(x.date_submitted);
+    if (isNaN(d)) return;
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    if (!buckets[key]) buckets[key] = { completed: 0, notCompleted: 0, label: d.toLocaleString('en-US', { month: 'short' }) };
+    if (x.status === 'Completed') buckets[key].completed++;
+    else buckets[key].notCompleted++;
+  });
+  const keys = Object.keys(buckets).sort().slice(-6);
+  const labels = keys.map(k => buckets[k].label);
+  const completedData = keys.map(k => buckets[k].completed);
+  const notCompletedData = keys.map(k => buckets[k].notCompleted);
+  const colorFor = (status, baseColor) => (ctx) => {
+    if (!chartFilter) return baseColor;
+    const match = chartFilter.month === keys[ctx.dataIndex] && chartFilter.status === status;
+    return match ? baseColor : hexToRgba(baseColor, 0.25);
+  };
 
   if (progressChart) progressChart.destroy();
   progressChart = new Chart(document.getElementById('progressChart'), {
-    type: 'doughnut',
+    type: 'bar',
     data: {
-      labels: [`Completed (${done})`, `Remaining (${remain})`],
-      datasets: [{
-        data: [done, remain],
-        borderWidth: 2
-      }]
+      labels,
+      datasets: [
+        { label: 'Completed', data: completedData, backgroundColor: colorFor('Completed', '#0057ff'), stack: 'total', borderRadius: 0, maxBarThickness: 46 },
+        { label: 'Not Completed', data: notCompletedData, backgroundColor: colorFor('NotCompleted', '#111827'), stack: 'total', borderRadius: 0, maxBarThickness: 46 }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '68%',
-      layout: { padding: { top: 6, right: 20, bottom: 8, left: 8 } },
+      layout: { padding: { top: 6, right: 12, bottom: 0, left: 4 } },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const el = elements[0];
+        const month = keys[el.index];
+        const status = el.datasetIndex === 0 ? 'Completed' : 'NotCompleted';
+        selectChartFilter(month, status);
+      },
+      onHover: (evt, elements) => {
+        if (evt.native && evt.native.target) evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef1f5' } }
+      },
       plugins: {
-        title: {
-          display: true,
-          text: `${pct}% Completed`,
-          font: { size: 14, weight: '700' },
-          padding: { bottom: 10 }
-        },
+        title: { display: false },
         legend: {
           display: true,
-          position: 'right',
+          position: 'bottom',
           align: 'center',
-          labels: {
-            boxWidth: 34,
-            boxHeight: 12,
-            padding: 14,
-            font: { size: 13 }
-          }
+          labels: { boxWidth: 12, boxHeight: 12, padding: 14, font: { size: 12 } }
         },
         tooltip: { enabled: true }
       }
-    }
+    },
+    plugins: [barValueLabelPlugin]
   });
+
+  const chartTitleEl = document.getElementById('chartTitle');
+  if (chartTitleEl) {
+    chartTitleEl.innerHTML = 'Monthly Progress' +
+      (chartFilter ? ` <span class="heatmap-clear-pill" onclick="selectChartFilter('${chartFilter.month}','${chartFilter.status}')">📊 ${monthKeyToDisplay(chartFilter.month)} • ${chartFilter.status === 'Completed' ? 'Completed' : 'Not Completed'} <span class="x">✕</span></span>` : '');
+  }
 
   renderHeatmap(data);
 }
